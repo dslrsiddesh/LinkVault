@@ -10,7 +10,8 @@ import {
   FiFolder,
   FiActivity,
 } from "react-icons/fi";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../AuthContext";
+import { API_BASE } from "../api";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -20,10 +21,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState(null);
 
-  // Force re-render every minute to update countdowns
+  // Tick every minute so expiry countdowns stay current
   const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000); // Update every 60s
+    const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -33,13 +34,13 @@ const Dashboard = () => {
 
   const fetchMyFiles = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/files/user/my-files", {
+      const res = await fetch(`${API_BASE}/files/user/my-files`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) setFiles(data);
-    } catch (err) {
-      console.error("Failed to fetch files");
+    } catch {
+      // silently fail — empty dashboard is fine
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ const Dashboard = () => {
   const handleDelete = async (code) => {
     if (!window.confirm("Delete this file permanently?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/files/${code}`, {
+      const res = await fetch(`${API_BASE}/files/${code}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -56,7 +57,7 @@ const Dashboard = () => {
         setFiles(files.filter((f) => f.code !== code));
         toast.success("File deleted successfully");
       }
-    } catch (err) {
+    } catch {
       toast.error("Error deleting file");
     }
   };
@@ -73,12 +74,10 @@ const Dashboard = () => {
     const expiry = new Date(expiryDate);
     const diffMs = expiry - now;
 
-    // 1. Expired?
     if (diffMs <= 0) {
       return { label: "EXPIRED", color: "red", text: "Link invalid" };
     }
 
-    // 2. Calculate Units
     const diffMins = Math.floor(diffMs / 60000);
     const diffHrs = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHrs / 24);
@@ -172,7 +171,7 @@ const Dashboard = () => {
                     </div>
                   </td>
 
-                  {/* Views Column */}
+                  {/* Views */}
                   <td className="px-6 py-4 text-sm font-medium text-text-main">
                     <div className="flex items-center gap-2">
                       <FiEye className="text-text-muted" />
@@ -183,10 +182,9 @@ const Dashboard = () => {
                     </div>
                   </td>
 
-                  {/* Expiry Status Column (UPDATED) */}
+                  {/* Expiry */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col items-start gap-1">
-                      {/* Badge */}
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
                           status.label === "EXPIRED"
@@ -197,7 +195,7 @@ const Dashboard = () => {
                         {status.label}
                       </span>
 
-                      {/* Time Left Text */}
+                      {/* Time remaining */}
                       <span className="text-xs text-text-muted font-mono flex items-center gap-1">
                         <FiClock className="w-3 h-3" />
                         {status.text}
@@ -205,7 +203,7 @@ const Dashboard = () => {
                     </div>
                   </td>
 
-                  {/* Actions Column */}
+                  {/* Actions */}
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button

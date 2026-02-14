@@ -10,16 +10,15 @@ import {
   FiCopy,
   FiCheck,
 } from "react-icons/fi";
+import { API_BASE } from "../api";
 
 const ViewPage = () => {
   const { code } = useParams();
-  const [status, setStatus] = useState("loading"); // loading | password | success | error
+  const [status, setStatus] = useState("loading");
   const [data, setData] = useState(null);
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
-
-  // Prevent double-fetching in React Strict Mode
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -34,12 +33,11 @@ const ViewPage = () => {
       const headers = pwd ? { "Content-Type": "application/json" } : {};
       const body = pwd ? JSON.stringify({ password: pwd }) : null;
 
-      const res = await fetch(`http://localhost:5000/api/files/${code}`, {
+      const res = await fetch(`${API_BASE}/files/${code}`, {
         method,
         headers,
         body,
       });
-
       const result = await res.json();
 
       if (res.status === 200) {
@@ -54,21 +52,19 @@ const ViewPage = () => {
       } else {
         setStatus("error");
       }
-    } catch (err) {
+    } catch {
       setStatus("error");
     }
   };
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
-    hasFetched.current = false;
-    hasFetched.current = true;
     fetchFile(password);
   };
 
   const handleDownload = () => {
     if (data?.downloadUrl) {
-      window.location.href = `http://localhost:5000${data.downloadUrl}`;
+      window.location.href = `${API_BASE.replace("/api", "")}${data.downloadUrl}`;
     }
   };
 
@@ -80,15 +76,12 @@ const ViewPage = () => {
     }
   };
 
-  // 🔴 SAFE SIZE CALCULATION
   const getFileSize = () => {
     if (!data) return "0.00";
-    // Check all possible field names from DB/API to prevent NaN
     const bytes = data.size_bytes || data.fileSize || data.size || 0;
     return (bytes / 1024).toFixed(2);
   };
 
-  // 🔴 SAFE NAME & TYPE
   const getFileName = () =>
     data?.original_name || data?.originalName || "Secure File";
   const getMimeType = () =>
@@ -96,7 +89,7 @@ const ViewPage = () => {
 
   return (
     <div className="w-full min-h-[70vh] flex flex-col items-center justify-center animate-fade-in px-4">
-      {/* 1. Loading State */}
+      {/* Loading */}
       {status === "loading" && (
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-16 h-16 bg-surfaceHighlight rounded-full mb-4 shadow-sm"></div>
@@ -104,7 +97,7 @@ const ViewPage = () => {
         </div>
       )}
 
-      {/* 2. Password Locked State */}
+      {/* Password prompt */}
       {status === "password" && (
         <div className="w-full max-w-md bg-white border border-border rounded-2xl shadow-grand p-10 text-center relative z-10">
           <div className="w-16 h-16 bg-surfaceHighlight rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
@@ -137,7 +130,7 @@ const ViewPage = () => {
         </div>
       )}
 
-      {/* 3. Success State */}
+      {/* Content view */}
       {status === "success" && data && (
         <div className="w-full max-w-3xl bg-white border border-border rounded-2xl shadow-grand overflow-hidden relative z-10">
           <div className="bg-surfaceHighlight/30 border-b border-border/50 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -196,7 +189,6 @@ const ViewPage = () => {
                 <h2 className="text-2xl sm:text-3xl font-bold text-text-main mb-2 break-all px-4">
                   {getFileName()}
                 </h2>
-                {/* SAFE Size Handling */}
                 <p className="text-text-muted mb-10 text-sm font-medium">
                   {getFileSize()} KB • {getMimeType()}
                 </p>
@@ -213,7 +205,7 @@ const ViewPage = () => {
         </div>
       )}
 
-      {/* 4. Error State */}
+      {/* Expired / not found */}
       {status === "error" && (
         <div className="text-center p-8 max-w-lg bg-white border border-border rounded-2xl shadow-grand">
           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-red-100">

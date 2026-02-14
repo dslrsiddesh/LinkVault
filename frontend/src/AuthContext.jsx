@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
+import { API_BASE } from "./api";
 
 const AuthContext = createContext(null);
 
@@ -7,21 +8,20 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in (on page refresh)
+  // Restore session from stored token on mount
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
         try {
-          const res = await fetch("http://localhost:5000/api/auth/me", {
+          const res = await fetch(`${API_BASE}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
-            const userData = await res.json();
-            setUser(userData);
+            setUser(await res.json());
           } else {
-            logout(); // Token invalid
+            logout();
           }
-        } catch (err) {
+        } catch {
           logout();
         }
       }
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (email, password) => {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
+    const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (fullName, email, password) => {
-    const res = await fetch("http://localhost:5000/api/auth/register", {
+    const res = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fullName, email, password }),

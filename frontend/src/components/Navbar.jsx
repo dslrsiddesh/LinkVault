@@ -1,29 +1,21 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FiLogIn, FiUser, FiLogOut } from "react-icons/fi";
-import { useAuth } from "../../context/AuthContext";
+import { FiUser, FiLogOut } from "react-icons/fi";
+import { useAuth } from "../AuthContext";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
 
-  // Robust function to get the name regardless of format (API vs DB)
   const getDisplayName = () => {
     if (!user) return "";
-    // Check both possible property names
     const name = user.fullName || user.full_name;
-
-    if (name) {
-      // Return just the first name (e.g., "Siddesh" from "Siddesh K")
-      return name.split(" ")[0];
-    }
-    // Fallback to email if name is completely missing
+    if (name) return name.split(" ")[0];
     return user.email?.split("@")[0];
   };
 
   return (
     <nav className="w-full h-20 fixed top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border/50 shadow-sm transition-all">
       <div className="max-w-7xl mx-auto px-8 h-full flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
             <span className="font-bold text-white text-lg">L</span>
@@ -33,11 +25,9 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Dynamic Actions */}
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              {/* User Greeting - Visible on Desktop */}
               <div className="hidden md:flex flex-col items-end mr-2 animate-fade-in">
                 <span className="text-xs font-bold text-text-main">
                   Welcome, {getDisplayName()}

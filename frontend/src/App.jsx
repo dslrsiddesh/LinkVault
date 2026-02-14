@@ -1,8 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import MainLayout from "./components/layout/MainLayout";
-
+import MainLayout from "./components/MainLayout";
 import Home from "./pages/Home";
 import ViewPage from "./pages/ViewPage";
 import Login from "./pages/Login";
@@ -12,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 function App() {
   return (
     <MainLayout>
-      {/* Configure Toaster here */}
       <Toaster
         position="top-center"
         toastOptions={{
@@ -22,10 +20,7 @@ function App() {
             borderRadius: "10px",
           },
           success: {
-            iconTheme: {
-              primary: "#10B981", // Green
-              secondary: "white",
-            },
+            iconTheme: { primary: "#10B981", secondary: "white" },
           },
         }}
       />

@@ -4,7 +4,7 @@ import Navbar from "./Navbar";
 const MainLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-background text-text-main font-sans antialiased relative selection:bg-primary/20 selection:text-primary">
-      {/* 1. The Dot Grid Background */}
+      {/* Dot grid background pattern */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
@@ -15,10 +15,8 @@ const MainLayout = ({ children }) => {
         }}
       />
 
-      {/* 2. Navbar */}
       <Navbar />
 
-      {/* 3. Main Content Area */}
       <main className="relative z-10 pt-32 pb-20 px-4 max-w-7xl mx-auto flex flex-col items-center w-full">
         {children}
       </main>

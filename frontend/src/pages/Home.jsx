@@ -1,12 +1,10 @@
 import React from "react";
-import MainLayout from "../components/layout/MainLayout";
-import UploadCard from "../features/upload/UploadCard";
+import UploadCard from "../components/UploadCard";
 import { FiShield } from "react-icons/fi";
 
 const Home = () => {
   return (
     <div className="flex flex-col items-center justify-center w-full min-h-[70vh] gap-10">
-      {/* Hero Text (Floating directly on grid) */}
       <div className="text-center space-y-6 animate-fade-in max-w-3xl z-20">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 border border-border/60 shadow-sm text-[10px] font-bold text-primary uppercase tracking-widest backdrop-blur-sm">
           <FiShield /> End-to-End Encrypted
@@ -25,7 +23,6 @@ const Home = () => {
         </p>
       </div>
 
-      {/* The Card (Floating directly on grid - No container box) */}
       <div className="w-full animate-fade-in z-20">
         <UploadCard />
       </div>

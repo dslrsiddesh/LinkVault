@@ -7,7 +7,7 @@ import {
   FiArrowRight,
   FiAlertCircle,
 } from "react-icons/fi";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../AuthContext";
 
 const Register = () => {
   const [fullName, setFullName] = useState("");
@@ -19,7 +19,7 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // VALIDATION LOGIC
+  // Validate each field before submit
   const validateForm = () => {
     if (!fullName || fullName.length < 2) {
       setError("Name must be at least 2 characters.");
@@ -41,7 +41,7 @@ const Register = () => {
     e.preventDefault();
     setError("");
 
-    if (!validateForm()) return; // Stop if invalid
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
