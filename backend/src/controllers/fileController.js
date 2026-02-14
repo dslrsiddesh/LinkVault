@@ -1,64 +1,54 @@
 const db = require("../config/db");
 const path = require("path");
 const fs = require("fs");
-const bcrypt = require("bcrypt"); // <--- ADD THIS
+const bcrypt = require("bcrypt");
 
-// Helper: Delete file from Disk and DB
+// Removes a file from disk and its record from the database
 const deleteFilePermanently = (file) => {
-  console.log(`[BURN] Limit reached for ${file.code}. Deleting...`);
-
-  // 1. Delete from Disk
   if (file.file_path) {
-    const filePath = path.resolve(__dirname, "../../", file.file_path);
-    fs.unlink(filePath, (err) => {
+    const diskPath = path.resolve(__dirname, "../../", file.file_path);
+    fs.unlink(diskPath, (err) => {
       if (err && err.code !== "ENOENT")
-        console.error("Error deleting file from disk:", err.message);
+        console.error("Failed to delete file from disk:", err.message);
     });
   }
 
-  // 2. Delete from DB
-  db.run("DELETE FROM uploads WHERE id = ?", [file.id], (err) => {
-    if (err) console.error("Error deleting from DB:", err.message);
-    else console.log(`[BURN] File ${file.code} destroyed.`);
-  });
+  db.run("DELETE FROM uploads WHERE id = ?", [file.id]);
 };
 
-// 1. GET METADATA / TEXT CONTENT
+// Check if the file should be destroyed after this view
+const shouldBurn = (file, viewCount) => {
+  if (file.max_views && viewCount >= file.max_views) return true;
+  if (file.is_one_time && viewCount >= 1) return true;
+  return false;
+};
+
 exports.getFile = (req, res) => {
   const { code } = req.params;
-  const { password } = req.body;
+  const password = req.body?.password || null;
 
   db.get("SELECT * FROM uploads WHERE code = ?", [code], async (err, file) => {
-    // <--- Make async
     if (err || !file)
       return res.status(404).json({ error: "File not found or expired" });
 
-    // Check Expiry
-    if (new Date(file.expires_at) < new Date()) {
+    if (new Date(file.expires_at) < new Date())
       return res.status(410).json({ error: "This link has expired" });
-    }
 
-    // --- FIX 1: PASSWORD CHECK ---
+    // Password gate
     if (file.password_hash) {
-      if (!password) {
+      if (!password)
         return res.status(403).json({ error: "Password required" });
-      }
       const match = await bcrypt.compare(password, file.password_hash);
-      if (!match) {
-        return res.status(403).json({ error: "Incorrect password" });
-      }
+      if (!match) return res.status(403).json({ error: "Incorrect password" });
     }
 
-    // Logic: If it's a TEXT file, viewing it counts as a "View/Download"
     if (file.type === "text") {
-      // Increment View Count
       const newViews = (file.view_count || 0) + 1;
       db.run("UPDATE uploads SET view_count = ? WHERE id = ?", [
         newViews,
         file.id,
       ]);
 
-      // Send Response
       res.json({
         id: file.id,
         type: "text",
@@ -69,22 +59,16 @@ exports.getFile = (req, res) => {
         max_views: file.max_views,
       });
 
-      // --- FIX 2: BURN LOGIC (Check is_one_time) ---
-      if (
-        (file.max_views && newViews >= file.max_views) ||
-        (file.is_one_time && newViews >= 1)
-      ) {
-        deleteFilePermanently(file);
-      }
+      if (shouldBurn(file, newViews)) deleteFilePermanently(file);
     } else {
-      // If it's a FILE, return metadata only.
+      // For files, return metadata only (download happens via separate endpoint)
       res.json({
         id: file.id,
         type: "file",
         original_name: file.original_name,
         size_bytes: file.size_bytes,
         mime_type: file.mime_type,
-        isPasswordProtected: !!file.password_hash, // Send boolean flag to frontend
+        isPasswordProtected: !!file.password_hash,
         view_count: file.view_count,
         max_views: file.max_views,
       });
@@ -92,66 +76,48 @@ exports.getFile = (req, res) => {
   });
 };
 
-// 2. DOWNLOAD FILE
 exports.downloadFile = (req, res) => {
   const { code } = req.params;
 
   db.get("SELECT * FROM uploads WHERE code = ?", [code], (err, file) => {
     if (err || !file) return res.status(404).json({ error: "File not found" });
 
-    // Check Expiry
-    if (new Date(file.expires_at) < new Date()) {
+    if (new Date(file.expires_at) < new Date())
       return res.status(410).json({ error: "Link expired" });
-    }
 
-    const filePath = path.resolve(__dirname, "../../", file.file_path);
-
-    if (!fs.existsSync(filePath)) {
+    const diskPath = path.resolve(__dirname, "../../", file.file_path);
+    if (!fs.existsSync(diskPath))
       return res.status(404).json({ error: "File missing from server" });
-    }
 
-    // Increment View Count
     const newViews = (file.view_count || 0) + 1;
     db.run("UPDATE uploads SET view_count = ? WHERE id = ?", [
       newViews,
       file.id,
     ]);
 
-    // Set Headers
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${file.original_name}"`,
     );
     res.setHeader("Content-Type", file.mime_type || "application/octet-stream");
 
-    // Create Stream
-    const stream = fs.createReadStream(filePath);
+    const stream = fs.createReadStream(diskPath);
     stream.pipe(res);
 
-    // --- FIX 2: BURN LOGIC (Check is_one_time) ---
     stream.on("end", () => {
-      if (
-        (file.max_views && newViews >= file.max_views) ||
-        (file.is_one_time && newViews >= 1)
-      ) {
-        // Wait a tiny bit to ensure connection closes, then nuke it
+      if (shouldBurn(file, newViews)) {
         setTimeout(() => deleteFilePermanently(file), 1000);
       }
     });
 
-    stream.on("error", (err) => {
-      console.error("Stream error:", err);
-      res.end();
-    });
+    stream.on("error", () => res.end());
   });
 };
 
-// 3. GET USER FILES (Dashboard)
 exports.getMyFiles = (req, res) => {
-  const userId = req.user.id;
   db.all(
     "SELECT * FROM uploads WHERE user_id = ? ORDER BY created_at DESC",
-    [userId],
+    [req.user.id],
     (err, rows) => {
       if (err) return res.status(500).json({ error: "Database error" });
       res.json(rows);
@@ -159,14 +125,12 @@ exports.getMyFiles = (req, res) => {
   );
 };
 
-// 4. DELETE FILE (Manual)
 exports.deleteFile = (req, res) => {
   const { code } = req.params;
-  const userId = req.user.id;
 
   db.get(
     "SELECT * FROM uploads WHERE code = ? AND user_id = ?",
-    [code, userId],
+    [code, req.user.id],
     (err, file) => {
       if (err || !file)
         return res

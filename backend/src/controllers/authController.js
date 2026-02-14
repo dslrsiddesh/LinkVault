@@ -4,37 +4,24 @@ const jwt = require("jsonwebtoken");
 
 const SECRET_KEY = process.env.JWT_SECRET || "super-secret-key-change-this";
 
-// 1. REGISTER
 exports.register = async (req, res) => {
-  console.log("📝 Register Request Received:", req.body); // Log input
-
   const { fullName, email, password } = req.body;
 
   if (!email || !password) {
-    console.log("❌ Missing fields");
     return res.status(400).json({ error: "Email and password are required" });
   }
 
   try {
-    // Log before hashing
-    console.log("🔐 Hashing password...");
     const hash = await bcrypt.hash(password, 10);
-    console.log("✅ Password hashed.");
-
     const query = `INSERT INTO users (full_name, email, password_hash) VALUES (?, ?, ?)`;
 
     db.run(query, [fullName, email, hash], function (err) {
       if (err) {
-        console.error("❌ Database Insert Error:", err.message); // <--- THIS IS KEY
         if (err.message.includes("UNIQUE")) {
           return res.status(400).json({ error: "Email already exists" });
         }
-        return res
-          .status(500)
-          .json({ error: "Database error: " + err.message });
+        return res.status(500).json({ error: "Database error" });
       }
-
-      console.log("✅ User inserted with ID:", this.lastID);
 
       const token = jwt.sign({ id: this.lastID, email }, SECRET_KEY, {
         expiresIn: "7d",
@@ -47,12 +34,10 @@ exports.register = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("🔥 CRITICAL SERVER ERROR:", error); // <--- THIS WILL SHOW THE REAL BUG
-    res.status(500).json({ error: "Server error: " + error.message });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
-// 2. LOGIN
 exports.login = (req, res) => {
   const { email, password } = req.body;
 
@@ -65,7 +50,6 @@ exports.login = (req, res) => {
     if (!match)
       return res.status(401).json({ error: "Invalid email or password" });
 
-    // Success: Generate Token
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, {
       expiresIn: "7d",
     });
@@ -78,9 +62,7 @@ exports.login = (req, res) => {
   });
 };
 
-// 3. GET CURRENT USER (For Frontend to check if logged in)
 exports.getMe = (req, res) => {
-  // req.user is set by the middleware (we will build this next)
   db.get(
     `SELECT id, full_name, email FROM users WHERE id = ?`,
     [req.user.id],
