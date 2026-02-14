@@ -3,13 +3,23 @@ import Navbar from "./Navbar";
 
 const MainLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-background text-text-main font-sans antialiased selection:bg-primary/20 selection:text-primary relative">
-      {/* 1. Grand Gradient Mesh (Subtle top glow) */}
-      <div className="fixed top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none z-0" />
+    <div className="min-h-screen bg-background text-text-main font-sans antialiased relative selection:bg-primary/20 selection:text-primary">
+      {/* 1. The Dot Grid Background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundColor: "#f8fafc",
+          backgroundImage: "radial-gradient(#64748b 1.5px, transparent 1.5px)",
+          backgroundSize: "24px 24px",
+          opacity: 0.15,
+        }}
+      />
 
+      {/* 2. Navbar */}
       <Navbar />
 
-      <main className="relative z-10 pt-32 pb-16 px-4 max-w-7xl mx-auto flex flex-col items-center">
+      {/* 3. Main Content Area */}
+      <main className="relative z-10 pt-32 pb-20 px-4 max-w-7xl mx-auto flex flex-col items-center w-full">
         {children}
       </main>
     </div>

@@ -1,11 +1,24 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { FiLogIn, FiUser, FiGrid, FiLogOut } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import { FiLogIn, FiUser, FiLogOut } from "react-icons/fi";
+import { useAuth } from "../../context/AuthContext";
 
 const Navbar = () => {
-  const location = useLocation();
-  // TODO: Replace with real auth state later
-  const isLoggedIn = location.pathname === "/dashboard";
+  const { user, logout } = useAuth();
+
+  // Robust function to get the name regardless of format (API vs DB)
+  const getDisplayName = () => {
+    if (!user) return "";
+    // Check both possible property names
+    const name = user.fullName || user.full_name;
+
+    if (name) {
+      // Return just the first name (e.g., "Siddesh" from "Siddesh K")
+      return name.split(" ")[0];
+    }
+    // Fallback to email if name is completely missing
+    return user.email?.split("@")[0];
+  };
 
   return (
     <nav className="w-full h-20 fixed top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border/50 shadow-sm transition-all">
@@ -20,23 +33,35 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Right Side Actions */}
+        {/* Dynamic Actions */}
         <div className="flex items-center gap-4">
-          {isLoggedIn ? (
+          {user ? (
             <>
-              <div className="hidden md:flex flex-col items-end mr-2">
+              {/* User Greeting - Visible on Desktop */}
+              <div className="hidden md:flex flex-col items-end mr-2 animate-fade-in">
                 <span className="text-xs font-bold text-text-main">
-                  Welcome back
+                  Welcome, {getDisplayName()}
                 </span>
-                <span className="text-[10px] text-text-muted">Pro Member</span>
+                <Link
+                  to="/dashboard"
+                  className="text-[10px] text-primary font-bold hover:underline"
+                >
+                  View Dashboard
+                </Link>
               </div>
+
               <Link
                 to="/"
                 className="p-2.5 rounded-full text-text-muted hover:text-primary hover:bg-primary/5 transition-all"
+                title="New Upload"
               >
                 <span className="text-sm font-bold">New Upload</span>
               </Link>
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-white text-sm font-bold text-text-muted hover:text-accent hover:border-accent hover:bg-accent/5 transition-all">
+
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-white text-sm font-bold text-text-muted hover:text-accent hover:border-accent hover:bg-accent/5 transition-all"
+              >
                 <FiLogOut className="w-4 h-4" />
                 <span>Logout</span>
               </button>

@@ -1,24 +1,43 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import MainLayout from "./components/layout/MainLayout";
+
 import Home from "./pages/Home";
+import ViewPage from "./pages/ViewPage";
 import Login from "./pages/Login";
-import Register from "./pages/Register"; // <--- This file must exist
-import Dashboard from "./pages/Dashboard"; // <--- This file must exist
-import ViewPage from "./pages/ViewPage"; // <--- This file must exist
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
-    <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/v/:code" element={<ViewPage />} />
-        </Routes>
-      </MainLayout>
-    </BrowserRouter>
+    <MainLayout>
+      {/* Configure Toaster here */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: "#333",
+            color: "#fff",
+            borderRadius: "10px",
+          },
+          success: {
+            iconTheme: {
+              primary: "#10B981", // Green
+              secondary: "white",
+            },
+          },
+        }}
+      />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/v/:code" element={<ViewPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </MainLayout>
   );
 }
 

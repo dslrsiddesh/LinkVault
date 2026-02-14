@@ -1,269 +1,272 @@
 import React, { useState, useEffect } from "react";
 import {
-  FiFile,
-  FiType,
-  FiSettings,
+  FiUploadCloud,
+  FiFileText,
   FiLock,
   FiClock,
-  FiEye,
   FiActivity,
   FiX,
-  FiUploadCloud,
+  FiCheck,
+  FiZap,
 } from "react-icons/fi";
-import { useUpload } from "./useUpload";
-import UploadResult from "./components/UploadResult";
+import toast from "react-hot-toast";
+import useUpload from "./useUpload";
 
 const UploadCard = () => {
   const {
     activeTab,
     setActiveTab,
+    file,
+    handleFileSelect,
     textContent,
     setTextContent,
-    file,
-    setFile,
     settings,
-    updateSetting,
+    setSettings,
     loading,
-    result,
     error,
+    result,
     upload,
-    reset,
+    resetUpload,
   } = useUpload();
 
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Sync Logic
+  // Show Error Toast when error state changes
   useEffect(() => {
-    if (settings.isOneTime) updateSetting("maxViews", "1");
-  }, [settings.isOneTime]);
+    if (error) toast.error(error);
+  }, [error]);
 
-  if (result) {
-    return (
-      <div className="w-full max-w-xl mx-auto bg-surface border border-border/60 rounded-2xl shadow-grand p-10 animate-fade-in text-center">
-        <UploadResult uniqueCode={result.uniqueCode} onReset={reset} />
-      </div>
-    );
-  }
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = () => {
+    if (result?.uniqueCode) {
+      navigator.clipboard.writeText(
+        `${window.location.origin}/v/${result.uniqueCode}`,
+      );
+      setCopied(true);
+      toast.success("Link copied to clipboard!"); // <--- Toast
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Toggle Burn Logic
+  const toggleBurn = () => {
+    const isBurning = !settings.isOneTime;
+    setSettings({
+      ...settings,
+      isOneTime: isBurning,
+      maxViews: isBurning ? "1" : "",
+    });
+    if (isBurning) toast("Burn enabled: 1 view limit set", { icon: "🔥" }); // <--- Cool Toast
+  };
+
+  // Wrap handleFileSelect to show toast on error
+  const onFileSelect = (e) => {
+    const selected = e.target.files[0];
+    if (selected && selected.size > 100 * 1024 * 1024) {
+      toast.error("File too large (Max 100MB)");
+    }
+    handleFileSelect(e);
+  };
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-surface border border-border/60 rounded-2xl shadow-grand transition-all duration-300 overflow-hidden">
-      {/* 1. Header & Tabs */}
-      <div className="px-8 py-6 border-b border-border/50 bg-surfaceHighlight/30 flex items-center justify-between">
-        <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
-          Configure Upload
-        </span>
+    <div className="w-full max-w-2xl mx-auto bg-white border border-border rounded-2xl shadow-grand overflow-hidden transition-all animate-fade-in relative z-20">
+      {result ? (
+        <div className="p-10 text-center animate-fade-in">
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+            <FiCheck className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-text-main mb-2">
+            Transfer Secured.
+          </h2>
+          <p className="text-text-muted mb-8">
+            Your secure link is ready to share.
+          </p>
 
-        <div className="flex bg-white border border-border rounded-lg p-1 shadow-sm">
-          {["text", "file"].map((tab) => (
+          <div className="flex items-center gap-2 bg-surfaceHighlight p-2 rounded-xl border border-border/60 mb-8">
+            <div className="flex-1 bg-white border border-border rounded-lg px-4 py-3 text-sm font-mono text-text-muted truncate select-all">
+              {window.location.origin}/v/{result.uniqueCode}
+            </div>
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 capitalize ${
-                activeTab === tab
-                  ? "bg-primary text-white shadow-md"
-                  : "text-text-muted hover:text-text-main hover:bg-surfaceHighlight"
+              onClick={copyLink}
+              className={`px-6 py-3 rounded-lg font-bold text-white transition-all shadow-md ${
+                copied
+                  ? "bg-green-500 shadow-green-200"
+                  : "bg-primary hover:bg-primary-hover shadow-primary/20"
               }`}
             >
-              {tab === "text" ? <FiType /> : <FiFile />}
-              {tab}
+              {copied ? "Copied!" : "Copy Link"}
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-8 space-y-6">
-        {/* 2. Main Input */}
-        {activeTab === "text" ? (
-          <div className="relative">
-            <textarea
-              className="w-full h-48 bg-white border border-border rounded-xl p-5 text-text-main font-mono text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all resize-none shadow-inner"
-              placeholder="Paste sensitive content here..."
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-            />
-            <div className="absolute bottom-4 right-4 text-[10px] font-bold text-text-muted bg-surfaceHighlight px-2 py-1 rounded border border-border">
-              {textContent.length} chars
-            </div>
           </div>
-        ) : (
-          <label className="w-full h-48 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center bg-surfaceHighlight/20 hover:bg-white hover:border-primary/50 cursor-pointer transition-all group relative overflow-hidden">
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files[0])}
-            />
-
-            {file ? (
-              <div className="text-center p-4 relative z-10">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 text-primary">
-                  <FiFile className="w-6 h-6" />
-                </div>
-                <p className="text-text-main font-bold text-sm truncate max-w-[200px]">
-                  {file.name}
-                </p>
-                <p className="text-text-muted text-xs mt-1">
-                  {(file.size / 1024).toFixed(2)} KB
-                </p>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setFile(null);
-                  }}
-                  className="mt-3 text-xs text-accent hover:text-accent-hover font-bold flex items-center justify-center gap-1 bg-accent-light px-3 py-1 rounded-full transition-colors"
-                >
-                  <FiX className="w-3 h-3" /> Remove
-                </button>
-              </div>
-            ) : (
-              <div className="text-center group-hover:-translate-y-1 transition-transform">
-                <FiUploadCloud className="w-10 h-10 text-text-muted group-hover:text-primary mx-auto mb-3 transition-colors" />
-                <p className="text-text-main font-bold text-sm">Upload File</p>
-              </div>
-            )}
-          </label>
-        )}
-
-        {/* 3. Settings (Expanded & Robust) */}
-        <div className="border border-border/60 rounded-xl overflow-hidden bg-white shadow-sm">
           <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-full flex items-center justify-between px-6 py-4 bg-surfaceHighlight/20 hover:bg-surfaceHighlight/50 transition-colors text-left"
+            onClick={resetUpload}
+            className="text-sm font-bold text-text-muted hover:text-text-main underline decoration-2 decoration-transparent hover:decoration-primary transition-all"
           >
-            <span className="flex items-center gap-2 text-sm font-bold text-text-muted hover:text-primary transition-colors">
-              <FiSettings
-                className={`w-4 h-4 transition-transform duration-300 ${showSettings ? "rotate-90" : ""}`}
-              />
-              Security Options
-            </span>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${showSettings ? "bg-primary text-white border-primary" : "bg-white border-border text-text-muted"}`}
-            >
-              {showSettings ? "ACTIVE" : "DEFAULT"}
-            </span>
+            Send another file
           </button>
+        </div>
+      ) : (
+        <>
+          {/* Tabs */}
+          <div className="flex border-b border-border/50">
+            <button
+              onClick={() => setActiveTab("text")}
+              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "text" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-text-muted hover:bg-surfaceHighlight"}`}
+            >
+              <FiFileText /> Text / Code
+            </button>
+            <button
+              onClick={() => setActiveTab("file")}
+              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === "file" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-text-muted hover:bg-surfaceHighlight"}`}
+            >
+              <FiUploadCloud /> File Upload
+            </button>
+          </div>
 
-          {showSettings && (
-            <div className="p-6 border-t border-border/60 bg-white animate-fade-in space-y-4">
-              {/* Grid for Inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 1. Password */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase">
-                    Password
-                  </label>
-                  <div className="flex items-center bg-background border border-border rounded-lg px-3 py-2.5 focus-within:border-primary transition-all">
-                    <FiLock className="text-text-muted w-4 h-4 mr-2" />
-                    <input
-                      type="password"
-                      placeholder="Optional"
-                      className="bg-transparent w-full text-xs text-text-main font-medium focus:outline-none"
-                      value={settings.password}
-                      onChange={(e) =>
-                        updateSetting("password", e.target.value)
-                      }
-                    />
-                  </div>
+          <div className="p-8">
+            {/* Input Area */}
+            <div className="mb-8 min-h-[160px]">
+              {activeTab === "text" ? (
+                <textarea
+                  className="w-full h-40 p-4 bg-background border border-border rounded-xl resize-none focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-mono text-sm"
+                  placeholder="Paste your sensitive text, passwords, or code snippets here..."
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                />
+              ) : (
+                <div className="relative w-full h-40 border-2 border-dashed border-border rounded-xl bg-background hover:bg-surfaceHighlight/50 transition-colors group flex flex-col items-center justify-center text-center cursor-pointer">
+                  <input
+                    type="file"
+                    onChange={onFileSelect}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  {file ? (
+                    <div className="z-0 animate-fade-in">
+                      <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <FiFileText className="w-6 h-6" />
+                      </div>
+                      <p className="font-bold text-text-main">{file.name}</p>
+                      <p className="text-xs text-text-muted mt-1">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-12 h-12 bg-surfaceHighlight rounded-full flex items-center justify-center mx-auto mb-3">
+                        <FiUploadCloud className="w-6 h-6 text-text-muted group-hover:text-primary transition-colors" />
+                      </div>
+                      <p className="text-sm font-bold text-text-main">
+                        Click to browse or drag file
+                      </p>
+                      <p className="text-xs text-text-muted mt-1">
+                        Max 100MB • Auto-encrypted
+                      </p>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
 
-                {/* 2. Expiry */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase">
+            {/* Settings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase ml-1">
                     Expires In
                   </label>
-                  <div className="flex items-center bg-background border border-border rounded-lg px-3 py-2.5 focus-within:border-primary transition-all">
-                    <FiClock className="text-text-muted w-4 h-4 mr-2" />
+                  <div className="relative">
+                    <FiClock className="absolute left-3 top-3 text-text-muted w-4 h-4" />
                     <select
-                      className="bg-transparent w-full text-xs text-text-main font-medium focus:outline-none cursor-pointer"
                       value={settings.expiry}
-                      onChange={(e) => updateSetting("expiry", e.target.value)}
+                      onChange={(e) =>
+                        setSettings({ ...settings, expiry: e.target.value })
+                      }
+                      className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none appearance-none"
                     >
+                      <option value="5">5 Minutes</option>
                       <option value="10">10 Minutes</option>
                       <option value="60">1 Hour</option>
                       <option value="1440">1 Day</option>
-                      <option value="10080">1 Week</option>
+                      <option value="10080">7 Days</option>
                     </select>
                   </div>
                 </div>
-
-                {/* 3. Max Views (RESTORED!) */}
-                <div
-                  className={`space-y-1 transition-opacity ${settings.isOneTime ? "opacity-50" : "opacity-100"}`}
-                >
-                  <label className="text-[10px] font-bold text-text-muted uppercase">
-                    Max Views
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase ml-1">
+                    Password (Optional)
                   </label>
-                  <div className="flex items-center bg-background border border-border rounded-lg px-3 py-2.5 focus-within:border-primary transition-all">
-                    <FiEye className="text-text-muted w-4 h-4 mr-2" />
+                  <div className="relative">
+                    <FiLock className="absolute left-3 top-3 text-text-muted w-4 h-4" />
                     <input
-                      type="number"
-                      min="1"
-                      placeholder="Unlimited"
-                      className="bg-transparent w-full text-xs text-text-main font-medium focus:outline-none disabled:cursor-not-allowed"
-                      value={settings.maxViews}
+                      type="password"
+                      placeholder="Set protection..."
+                      value={settings.password}
                       onChange={(e) =>
-                        updateSetting("maxViews", e.target.value)
+                        setSettings({ ...settings, password: e.target.value })
                       }
-                      disabled={settings.isOneTime}
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Burn After Read (Rose Accent) */}
-                <div
-                  onClick={() =>
-                    updateSetting("isOneTime", !settings.isOneTime)
-                  }
-                  className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
-                    settings.isOneTime
-                      ? "bg-accent/5 border-accent shadow-sm"
-                      : "bg-background border-border hover:border-text-muted"
-                  }`}
-                >
-                  <div className="pl-1">
-                    <span
-                      className={`text-xs font-bold block ${settings.isOneTime ? "text-accent" : "text-text-main"}`}
-                    >
-                      Burn after read
-                    </span>
-                    <span className="text-[10px] text-text-muted">
-                      Delete after 1 view
-                    </span>
-                  </div>
-
-                  <div
-                    className={`w-9 h-5 rounded-full relative transition-colors ${settings.isOneTime ? "bg-accent" : "bg-slate-300"}`}
-                  >
-                    <div
-                      className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full shadow-sm transition-transform ${settings.isOneTime ? "translate-x-4" : "translate-x-0"}`}
+                      className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
                     />
                   </div>
                 </div>
               </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase ml-1">
+                    Max Downloads
+                  </label>
+                  <div className="relative">
+                    <FiActivity className="absolute left-3 top-3 text-text-muted w-4 h-4" />
+                    <input
+                      type="number"
+                      placeholder="Unlimited"
+                      value={settings.maxViews}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          maxViews: e.target.value,
+                          isOneTime: e.target.value === "1",
+                        })
+                      }
+                      className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase ml-1">
+                    Destruction
+                  </label>
+                  <div
+                    onClick={toggleBurn}
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all h-[42px] ${settings.isOneTime ? "bg-rose-50 border-rose-200 shadow-sm" : "bg-background border-border hover:bg-surfaceHighlight"}`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${settings.isOneTime ? "bg-rose-500 text-white" : "bg-border/20 text-text-muted"}`}
+                    >
+                      <FiZap className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1 flex items-center justify-between">
+                      <span
+                        className={`text-xs font-bold ${settings.isOneTime ? "text-rose-700" : "text-text-main"}`}
+                      >
+                        Burn after reading
+                      </span>
+                      {settings.isOneTime && (
+                        <FiCheck className="text-rose-600 w-4 h-4 mr-1" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Error */}
-        {error && (
-          <div className="text-xs font-bold text-accent bg-accent-light/50 px-4 py-3 rounded-lg border border-accent/20 text-center">
-            {error}
+            <button
+              onClick={upload}
+              disabled={loading}
+              className="w-full py-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? "Encrypting & Uploading..." : "Create Secure Link"}
+            </button>
           </div>
-        )}
-
-        {/* Action Button (Indigo) */}
-        <button
-          onClick={upload}
-          disabled={loading}
-          className={`w-full py-4 rounded-xl font-bold text-sm shadow-lg hover:shadow-grand-hover transition-all active:scale-[0.99] flex items-center justify-center gap-2 ${
-            loading
-              ? "bg-surfaceHighlight text-text-muted border border-border cursor-not-allowed"
-              : "bg-primary text-white hover:bg-primary-hover"
-          }`}
-        >
-          {loading ? "Securing Data..." : "Generate Secure Link"}
-          {!loading && <FiLock className="w-4 h-4 opacity-70" />}
-        </button>
-      </div>
+        </>
+      )}
     </div>
   );
 };
