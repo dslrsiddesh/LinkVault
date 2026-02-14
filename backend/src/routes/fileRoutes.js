@@ -3,8 +3,6 @@ const router = express.Router();
 const fileController = require("../controllers/fileController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
-// --- FIX: Specific routes MUST come before dynamic routes (/:code) ---
-
 // PROTECTED ROUTES (Only logged in users)
 router.get("/user/my-files", authMiddleware, fileController.getMyFiles);
 router.delete("/:code", authMiddleware, fileController.deleteFile);
