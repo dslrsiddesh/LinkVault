@@ -1,10 +1,11 @@
 const db = require("../config/db");
 const path = require("path");
 const fs = require("fs");
+const bcrypt = require("bcrypt"); // <--- ADD THIS
 
 // Helper: Delete file from Disk and DB
 const deleteFilePermanently = (file) => {
-  console.log(`🔥 [BURN] Limit reached for ${file.code}. Deleting...`);
+  console.log(`[BURN] Limit reached for ${file.code}. Deleting...`);
 
   // 1. Delete from Disk
   if (file.file_path) {
@@ -18,16 +19,17 @@ const deleteFilePermanently = (file) => {
   // 2. Delete from DB
   db.run("DELETE FROM uploads WHERE id = ?", [file.id], (err) => {
     if (err) console.error("Error deleting from DB:", err.message);
-    else console.log(`✅ [BURN] File ${file.code} destroyed.`);
+    else console.log(`[BURN] File ${file.code} destroyed.`);
   });
 };
 
 // 1. GET METADATA / TEXT CONTENT
 exports.getFile = (req, res) => {
   const { code } = req.params;
-  const { password } = req.body; // For password protected text
+  const { password } = req.body;
 
-  db.get("SELECT * FROM uploads WHERE code = ?", [code], (err, file) => {
+  db.get("SELECT * FROM uploads WHERE code = ?", [code], async (err, file) => {
+    // <--- Make async
     if (err || !file)
       return res.status(404).json({ error: "File not found or expired" });
 
@@ -36,9 +38,15 @@ exports.getFile = (req, res) => {
       return res.status(410).json({ error: "This link has expired" });
     }
 
-    // Check Password
-    if (file.password && file.password !== password) {
-      return res.status(403).json({ error: "Password required" });
+    // --- FIX 1: PASSWORD CHECK ---
+    if (file.password_hash) {
+      if (!password) {
+        return res.status(403).json({ error: "Password required" });
+      }
+      const match = await bcrypt.compare(password, file.password_hash);
+      if (!match) {
+        return res.status(403).json({ error: "Incorrect password" });
+      }
     }
 
     // Logic: If it's a TEXT file, viewing it counts as a "View/Download"
@@ -54,27 +62,29 @@ exports.getFile = (req, res) => {
       res.json({
         id: file.id,
         type: "text",
-        content: file.text_content, // Send content only if password matches
+        content: file.text_content,
         original_name: "Secure Text",
         created_at: file.created_at,
         view_count: newViews,
         max_views: file.max_views,
       });
 
-      // CHECK BURN LOGIC (Delete if limit reached)
-      if (file.max_views && newViews >= file.max_views) {
+      // --- FIX 2: BURN LOGIC (Check is_one_time) ---
+      if (
+        (file.max_views && newViews >= file.max_views) ||
+        (file.is_one_time && newViews >= 1)
+      ) {
         deleteFilePermanently(file);
       }
     } else {
-      // If it's a FILE, we just return metadata (actual download is separate)
-      // We do NOT increment view count here, only on actual download.
+      // If it's a FILE, return metadata only.
       res.json({
         id: file.id,
         type: "file",
         original_name: file.original_name,
         size_bytes: file.size_bytes,
         mime_type: file.mime_type,
-        isPasswordProtected: !!file.password,
+        isPasswordProtected: !!file.password_hash, // Send boolean flag to frontend
         view_count: file.view_count,
         max_views: file.max_views,
       });
@@ -118,9 +128,12 @@ exports.downloadFile = (req, res) => {
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
 
-    // CHECK BURN LOGIC (Delete AFTER download finishes)
+    // --- FIX 2: BURN LOGIC (Check is_one_time) ---
     stream.on("end", () => {
-      if (file.max_views && newViews >= file.max_views) {
+      if (
+        (file.max_views && newViews >= file.max_views) ||
+        (file.is_one_time && newViews >= 1)
+      ) {
         // Wait a tiny bit to ensure connection closes, then nuke it
         setTimeout(() => deleteFilePermanently(file), 1000);
       }
@@ -160,7 +173,7 @@ exports.deleteFile = (req, res) => {
           .status(404)
           .json({ error: "File not found or unauthorized" });
 
-      deleteFilePermanently(file); // Reuse our helper
+      deleteFilePermanently(file);
       res.json({ message: "File deleted successfully" });
     },
   );
