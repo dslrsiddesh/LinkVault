@@ -1,4 +1,3 @@
-import React from "react";
 import UploadCard from "../components/UploadCard";
 import { FiShield } from "react-icons/fi";
 

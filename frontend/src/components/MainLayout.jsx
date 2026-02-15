@@ -1,10 +1,8 @@
-import React from "react";
 import Navbar from "./Navbar";
 
 const MainLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-background text-text-main font-sans antialiased relative selection:bg-primary/20 selection:text-primary">
-      {/* Dot grid background pattern */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{

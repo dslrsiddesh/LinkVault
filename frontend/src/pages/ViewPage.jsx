@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   FiDownload,
@@ -97,7 +97,7 @@ const ViewPage = () => {
         </div>
       )}
 
-      {/* Password prompt */}
+      {/* Password */}
       {status === "password" && (
         <div className="w-full max-w-md bg-white border border-border rounded-2xl shadow-grand p-10 text-center relative z-10">
           <div className="w-16 h-16 bg-surfaceHighlight rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">

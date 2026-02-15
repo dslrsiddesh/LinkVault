@@ -40,7 +40,6 @@ const Dashboard = () => {
       const data = await res.json();
       if (res.ok) setFiles(data);
     } catch {
-      // silently fail — empty dashboard is fine
     } finally {
       setLoading(false);
     }

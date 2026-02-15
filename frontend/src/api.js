@@ -24,7 +24,6 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  // For file uploads — don't set Content-Type, let the browser handle the boundary
   upload: (endpoint, formData, headers = {}) =>
     request(endpoint, {
       method: "POST",
