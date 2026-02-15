@@ -90,7 +90,7 @@ Opens on `http://localhost:5173`. Hit the browser and start uploading right away
 
 Base URL: `http://localhost:5000/api`
 
-### Auth
+### Authentication
 
 | Method | Endpoint         | Auth | Body                            | What it does              |
 | ------ | ---------------- | ---- | ------------------------------- | ------------------------- |
@@ -120,43 +120,23 @@ Status codes: `400` validation error, `401` no auth, `403` wrong password, `404`
 
 ---
 
-## Database
-
-Two tables in SQLite, auto-created on startup:
-
-**users** -- `id`, `email` (unique), `password_hash`, `full_name`, `created_at`
-
-**uploads** -- `id`, `user_id` (nullable FK), `code` (unique), `type` (text/file), `text_content`, `file_path`, `original_name`, `mime_type`, `size_bytes`, `password_hash`, `expires_at`, `max_views`, `view_count`, `is_one_time`, `created_at`
-
----
-
 ## Design Decisions
 
-**SQLite** -- No database server to install. The whole DB is one file. Good enough for this scale.
+**SQLite:** No database server to install. The whole DB is one file. Good enough for this scale.
 
-**Local disk storage over cloud** -- Keeps the app self-contained. Multer saves files to `uploads/`, the DB stores the path. Swapping to S3 later would only mean changing the storage backend in Multer.
+**Local disk storage over cloud:** Keeps the app self-contained. Multer saves files to `uploads/`, the DB stores the path.
 
-**Background cleanup job** -- Runs every 60 seconds, deletes expired uploads from disk and DB. Without this, files from links nobody revisits would sit around forever. The server also checks expiry at request time, so expired content is never served even if the cleanup hasn't run yet.
+**Background cleanup job:** Runs every 60 seconds, deletes expired uploads from disk and DB. Without this, files from links nobody revisits would stay forever on the server disk. The server also checks expiry at request time, so expired content is never served even if the cleanup hasn't run yet.
 
-**GET and POST for the same `/files/:code`** -- GET works for public links. POST lets you send a password in the body for protected links. Same handler, no duplicated logic.
+**Upload without login:** Anyone can upload without an account. If you happen to be logged in, the upload gets tied to your account so you can manage it later from the dashboard.
 
-**Upload without login** -- Anyone can upload without an account. If you happen to be logged in, the upload gets tied to your account so you can manage it later from the dashboard.
+**Stateless JWT auth:** No server-side sessions. A signed token in the header is all that's needed. 7-day expiry so you don't have to log in every time.
 
-**Stateless JWT auth** -- No server-side sessions. A signed token in the header is all that's needed. 7-day expiry so you don't have to log in every time.
-
-**Frontend structure** -- Components, hooks, and pages each get one directory. No deep nesting for this project.
-
----
-
-## Data Flow
-
-**Upload:** User fills the form -> frontend builds FormData -> `POST /api/upload` -> Multer saves file to disk (if file) -> validation middleware checks inputs -> controller generates a 6-char hex code, hashes password if set, calculates expiry, inserts DB row -> returns the unique code to the frontend -> user gets a shareable link.
-
-**View:** Someone opens `/v/<code>` -> frontend hits `GET /api/files/<code>` -> controller looks up the code, checks expiry, checks password, bumps view count -> returns text content or file metadata -> if burn-after-reading or max views hit, deletes the upload.
+**Frontend structure:** Components, hooks, and pages each get one directory. No deep nesting for clarity.
 
 **Cleanup:** On server start, a setInterval runs every 60s -> queries for uploads past their `expires_at` -> deletes the file from disk and the row from the DB.
 
----
+**Security:** Passwords are hashed with bcrypt. Uploaded file names are randomized to prevent collisions and directory traversal. The app checks for expired links and max views before serving content.
 
 ## Assumptions and Limitations
 
@@ -164,6 +144,5 @@ Two tables in SQLite, auto-created on startup:
 - SQLite handles the expected load fine. Not built for heavy concurrent writes.
 - The `uploads/` directory must be writable by the Node process.
 - No rate limiting. Could be added with express-rate-limit.
-- No email verification on signup.
 - 6 hex chars gives around 16 million unique codes. Enough for this use case.
 - No file type restrictions beyond the 100 MB size cap.
