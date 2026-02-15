@@ -61,7 +61,7 @@ exports.getFile = (req, res) => {
 
       if (shouldBurn(file, newViews)) deleteFilePermanently(file);
     } else {
-      // For files, return metadata only (download happens via separate endpoint)
+      // For files, return metadata only
       res.json({
         id: file.id,
         type: "file",

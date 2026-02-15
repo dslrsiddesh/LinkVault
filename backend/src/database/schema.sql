@@ -3,7 +3,7 @@
 -- =============================================
 -- Stores registered user accounts
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER AUTO_INCREMENT PRIMARY KEY,
     full_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -17,8 +17,8 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 -- UPLOADS TABLE
 -- =============================================
 -- Stores uploaded files and text snippets
-CREATE TABLE IF NOT EXISTS uploads (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS uploads (    
+    id INTEGER AUTO_INCREMENT PRIMARY KEY ,
     
     -- The 6-character unique code (e.g., 'Xy9z1A')
     code TEXT UNIQUE NOT NULL,
